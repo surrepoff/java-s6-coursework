@@ -1,15 +1,25 @@
 package org.surrepoff.stat;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Objects;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static java.lang.Math.min;
 
 public class ServerMonitor {
+    private boolean get_cpu;
+    private boolean get_ram;
+    private boolean get_memory;
+    private ArrayList<String> get_memory_name;
+    private boolean get_ping;
+    private ArrayList<String> get_ping_site;
+    private boolean get_net_int;
+    private ArrayList<String> get_net_int_name;
+
     ServerMonitor() {
         boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
 
@@ -17,6 +27,59 @@ public class ServerMonitor {
             System.out.println("ERROR: IT'S WINDOWS");
             System.exit(1);
         }
+
+        get_memory_name = new ArrayList<String>();
+        get_ping_site = new ArrayList<String>();
+        get_net_int_name = new ArrayList<String>();
+    }
+
+    public void loadConfig() throws IOException {
+        System.getProperties().load(ClassLoader.getSystemResourceAsStream("config.properties"));
+        get_cpu = Boolean.parseBoolean(System.getProperty("get.cpu"));
+        get_ram = Boolean.parseBoolean(System.getProperty("get.ram"));
+        get_memory = Boolean.parseBoolean(System.getProperty("get.memory"));
+        get_ping = Boolean.parseBoolean(System.getProperty("get.ping"));
+        get_net_int = Boolean.parseBoolean(System.getProperty("get.net_int"));
+
+        String[] parts;
+
+        parts = System.getProperty("get.memory.name").split(";");
+        for (String part : parts){
+            if (part.length() > 0)
+                get_memory_name.add(part);
+        }
+
+        parts = System.getProperty("get.ping.site").split(";");
+        for (String part : parts){
+            if (part.length() > 0)
+                get_ping_site.add(part);
+        }
+
+        parts = System.getProperty("get.net_int.name").split(";");
+        for (String part : parts){
+            if (part.length() > 0)
+                get_net_int_name.add(part);
+        }
+    }
+
+    public void run() throws IOException {
+        loadConfig();
+
+        if (get_cpu)
+            getLoadCPUThreads();
+
+        if (get_ram)
+            getLoadRAM();
+
+        if (get_memory)
+            getLoadMemory();
+
+        if (get_ping)
+            for (String site : get_ping_site)
+                getTimePing(site);
+
+        if (get_net_int)
+            getLoadNetworkInterface();
     }
 
     public int getLoadCPUThreads() throws IOException {
@@ -172,6 +235,7 @@ public class ServerMonitor {
         time = (float) Math.round(time * 100) / 100;
 
         //System.out.println(number_of_lines);
+        System.out.printf("Ping to %s\n", address);
         System.out.printf("Packet loss = %d %%\n", packet_loss);
         System.out.printf("Time = %.2f ms\n", time);
 
@@ -240,10 +304,14 @@ public class ServerMonitor {
             //System.out.println(line);
         }
 
-        for (int i = 0; i < min(load_mem.size(), load_mem_name.size()); i++) {
-            String name = load_mem_name.get(i);
+        for (int i = 0; i < load_mem_name.size(); i++) {
+            String load_name = load_mem_name.get(i);
             Float value = load_mem.get(i);
-            System.out.printf("%s = %.2f %%\n", name, value);
+            for (String get_name : get_memory_name)
+            {
+                if (Objects.equals(load_name, get_name))
+                    System.out.printf("%s = %.2f %%\n", get_name, value);
+            }
         }
 
         return 0;
@@ -309,11 +377,15 @@ public class ServerMonitor {
             //System.out.println(line);
         }
 
+
         for (int i = 0; i < net_int_name.size(); i++) {
-            String name = net_int_name.get(i);
+            String load_name = net_int_name.get(i);
             Integer rcv = net_int_rcv.get(i);
             Integer snt = net_int_snt.get(i);
-            System.out.printf("%s = %d %d\n", name, rcv, snt);
+            for (String get_name : get_net_int_name) {
+                if (Objects.equals(load_name, get_name))
+                    System.out.printf("%s = %d %d\n", get_name, rcv, snt);
+            }
         }
 
         return 0;
