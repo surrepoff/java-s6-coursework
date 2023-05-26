@@ -3,6 +3,7 @@ package org.surrepoff.stat;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -10,6 +11,7 @@ import java.util.regex.Pattern;
 
 public class ServerMonitor {
     private final ServerMonitorInfo sm_info;
+    private final DataBase db;
 
     ServerMonitor() {
         boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
@@ -20,6 +22,7 @@ public class ServerMonitor {
         }
 
         sm_info = new ServerMonitorInfo();
+        db = new DataBase();
     }
 
     public void loadConfig() throws IOException {
@@ -55,6 +58,9 @@ public class ServerMonitor {
     public void run() throws IOException {
         loadConfig();
 
+        Connection connection = db.connectToDB();
+        db.checkDB(connection);
+
         while (true) {
             if (sm_info.get_cpu)
                 getLoadCPUThreads();
@@ -71,6 +77,8 @@ public class ServerMonitor {
 
             if (sm_info.get_net_int)
                 getLoadNetworkInterface();
+
+            db.addSMInfo(connection, sm_info);
 
             try {
                 Thread.sleep(sm_info.get_time_s * 1000L);
@@ -224,13 +232,13 @@ public class ServerMonitor {
 
         time = (float) Math.round(time * 100) / 100;
 
+        if (packet_loss == 100)
+            time = -1;
+
         //System.out.println(number_of_lines);
         System.out.printf("Ping to %s\n", address);
         System.out.printf("Packet loss = %d %%\n", packet_loss);
         System.out.printf("Time = %.2f ms\n", time);
-
-        if (packet_loss == 100)
-            time = -1;
 
         sm_info.result_ping_time.add(time);
     }
