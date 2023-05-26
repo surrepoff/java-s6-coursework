@@ -9,15 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ServerMonitor {
-    private boolean get_cpu;
-    private boolean get_ram;
-    private boolean get_memory;
-    private final ArrayList<String> get_memory_name;
-    private boolean get_ping;
-    private final ArrayList<String> get_ping_site;
-    private boolean get_net_int;
-    private final ArrayList<String> get_net_int_name;
-    private int get_time_s;
+    private final ServerMonitorInfo sm_info;
 
     ServerMonitor() {
         boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
@@ -27,38 +19,36 @@ public class ServerMonitor {
             System.exit(1);
         }
 
-        get_memory_name = new ArrayList<>();
-        get_ping_site = new ArrayList<>();
-        get_net_int_name = new ArrayList<>();
+        sm_info = new ServerMonitorInfo();
     }
 
     public void loadConfig() throws IOException {
         System.getProperties().load(ClassLoader.getSystemResourceAsStream("config.properties"));
-        get_cpu = Boolean.parseBoolean(System.getProperty("get.cpu"));
-        get_ram = Boolean.parseBoolean(System.getProperty("get.ram"));
-        get_memory = Boolean.parseBoolean(System.getProperty("get.memory"));
-        get_ping = Boolean.parseBoolean(System.getProperty("get.ping"));
-        get_net_int = Boolean.parseBoolean(System.getProperty("get.net_int"));
-        get_time_s = Integer.parseInt(System.getProperty("get.time_s"));
+        sm_info.get_cpu = Boolean.parseBoolean(System.getProperty("get.cpu"));
+        sm_info.get_ram = Boolean.parseBoolean(System.getProperty("get.ram"));
+        sm_info.get_memory = Boolean.parseBoolean(System.getProperty("get.memory"));
+        sm_info.get_ping = Boolean.parseBoolean(System.getProperty("get.ping"));
+        sm_info.get_net_int = Boolean.parseBoolean(System.getProperty("get.net_int"));
+        sm_info.get_time_s = Integer.parseInt(System.getProperty("get.time_s"));
 
         String[] parts;
 
         parts = System.getProperty("get.memory.name").split(";");
         for (String part : parts){
             if (part.length() > 0)
-                get_memory_name.add(part);
+                sm_info.get_memory_name.add(part);
         }
 
         parts = System.getProperty("get.ping.site").split(";");
         for (String part : parts){
             if (part.length() > 0)
-                get_ping_site.add(part);
+                sm_info.get_ping_site.add(part);
         }
 
         parts = System.getProperty("get.net_int.name").split(";");
         for (String part : parts){
             if (part.length() > 0)
-                get_net_int_name.add(part);
+                sm_info.get_net_int_name.add(part);
         }
     }
 
@@ -66,31 +56,31 @@ public class ServerMonitor {
         loadConfig();
 
         while (true) {
-            if (get_cpu)
+            if (sm_info.get_cpu)
                 getLoadCPUThreads();
 
-            if (get_ram)
+            if (sm_info.get_ram)
                 getLoadRAM();
 
-            if (get_memory)
+            if (sm_info.get_memory)
                 getLoadMemory();
 
-            if (get_ping)
-                for (String site : get_ping_site)
+            if (sm_info.get_ping)
+                for (String site : sm_info.get_ping_site)
                     getTimePing(site);
 
-            if (get_net_int)
+            if (sm_info.get_net_int)
                 getLoadNetworkInterface();
 
             try {
-                Thread.sleep(get_time_s * 1000L);
+                Thread.sleep(sm_info.get_time_s * 1000L);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
     }
 
-    public int getLoadCPUThreads() throws IOException {
+    public void getLoadCPUThreads() throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "top -b -1 -n 1 -w 200");
 
         builder.redirectErrorStream(true);
@@ -130,10 +120,10 @@ public class ServerMonitor {
             i++;
         }
 
-        return 0;
+        sm_info.result_cpu = load_cpu;
     }
 
-    public float getLoadRAM() throws IOException {
+    public void getLoadRAM() throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "free");
 
         builder.redirectErrorStream(true);
@@ -174,17 +164,16 @@ public class ServerMonitor {
 
             //System.out.println(line);
         }
-
         //System.out.println(number_of_lines);
 
         load_ram = (float) Math.round(load_ram * 100) / 100;
 
         System.out.printf("RAM = %.2f %%\n", load_ram);
 
-        return load_ram;
+        sm_info.result_ram = load_ram;
     }
 
-    public float getTimePing(String address) throws IOException {
+    public void getTimePing(String address) throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "ping -c 3 " + address);
 
         builder.redirectErrorStream(true);
@@ -241,12 +230,12 @@ public class ServerMonitor {
         System.out.printf("Time = %.2f ms\n", time);
 
         if (packet_loss == 100)
-            return -1;
+            time = -1;
 
-        return time;
+        sm_info.result_ping_time.add(time);
     }
 
-    public float getLoadMemory() throws IOException {
+    public void getLoadMemory() throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "df");
 
         builder.redirectErrorStream(true);
@@ -304,17 +293,33 @@ public class ServerMonitor {
         for (int i = 0; i < load_mem_name.size(); i++) {
             String load_name = load_mem_name.get(i);
             Float value = load_mem.get(i);
-            for (String get_name : get_memory_name)
+            for (String get_name : sm_info.get_memory_name)
             {
                 if (Objects.equals(load_name, get_name))
                     System.out.printf("%s = %.2f %%\n", get_name, value);
             }
         }
 
-        return 0;
+        for (String get_name : sm_info.get_memory_name)
+        {
+            boolean find = false;
+            for (int i = 0; i < load_mem_name.size(); i++) {
+                String load_name = load_mem_name.get(i);
+                Float value = load_mem.get(i);
+
+                if (Objects.equals(load_name, get_name)) {
+                    find = true;
+                    sm_info.result_memory_load.add(value);
+                    break;
+                }
+            }
+
+            if (!find)
+                sm_info.result_memory_load.add((float) -1);
+        }
     }
 
-    public float getLoadNetworkInterface() throws IOException {
+    public void getLoadNetworkInterface() throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "ifconfig");
 
         builder.redirectErrorStream(true);
@@ -379,12 +384,32 @@ public class ServerMonitor {
             String load_name = net_int_name.get(i);
             Integer rcv = net_int_rcv.get(i);
             Integer snt = net_int_snt.get(i);
-            for (String get_name : get_net_int_name) {
+            for (String get_name : sm_info.get_net_int_name) {
                 if (Objects.equals(load_name, get_name))
                     System.out.printf("%s = %d %d\n", get_name, rcv, snt);
             }
         }
 
-        return 0;
+        for (String get_name : sm_info.get_net_int_name)
+        {
+            boolean find = false;
+            for (int i = 0; i < net_int_name.size(); i++) {
+                String load_name = net_int_name.get(i);
+                Integer rcv = net_int_rcv.get(i);
+                Integer snt = net_int_snt.get(i);
+
+                if (Objects.equals(load_name, get_name)) {
+                    find = true;
+                    sm_info.result_net_int_rcv.add(rcv);
+                    sm_info.result_net_int_snt.add(snt);
+                    break;
+                }
+            }
+
+            if (!find) {
+                sm_info.result_net_int_rcv.add(-1);
+                sm_info.result_net_int_snt.add(-1);
+            }
+        }
     }
 }
