@@ -27,9 +27,9 @@ public class ServerMonitor {
             System.exit(1);
         }
 
-        get_memory_name = new ArrayList<String>();
-        get_ping_site = new ArrayList<String>();
-        get_net_int_name = new ArrayList<String>();
+        get_memory_name = new ArrayList<>();
+        get_ping_site = new ArrayList<>();
+        get_net_int_name = new ArrayList<>();
     }
 
     public void loadConfig() throws IOException {
@@ -65,8 +65,7 @@ public class ServerMonitor {
     public void run() throws IOException {
         loadConfig();
 
-        while (true)
-        {
+        while (true) {
             if (get_cpu)
                 getLoadCPUThreads();
 
@@ -83,9 +82,9 @@ public class ServerMonitor {
             if (get_net_int)
                 getLoadNetworkInterface();
 
-            try{
+            try {
                 Thread.sleep(get_time_s * 1000L);
-            }catch (InterruptedException e) {
+            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -100,12 +99,10 @@ public class ServerMonitor {
 
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
-        Pattern pattern_cpu = Pattern.compile("%Cpu\\d{1,}");
+        Pattern pattern_cpu = Pattern.compile("%Cpu\\d+");
         Pattern pattern_cpu_value = Pattern.compile("\\d{1,3}.\\d{1,2} id");
 
-        ArrayList<Float> load_cpu = new ArrayList<Float>();
-
-        int number_of_lines = 0;
+        ArrayList<Float> load_cpu = new ArrayList<>();
 
         String line;
         while (true) {
@@ -113,8 +110,6 @@ public class ServerMonitor {
             if (line == null) {
                 break;
             }
-
-            number_of_lines++;
 
             Matcher matcher_cpu = pattern_cpu.matcher(line);
 
@@ -148,10 +143,9 @@ public class ServerMonitor {
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
         Pattern pattern_mem = Pattern.compile("Mem:");
-        Pattern pattern_value = Pattern.compile("\\d{1,}");
+        Pattern pattern_value = Pattern.compile("\\d+");
 
         float load_ram = 0;
-        int number_of_lines = 0;
 
         String line;
         while (true) {
@@ -159,8 +153,6 @@ public class ServerMonitor {
             if (line == null) {
                 break;
             }
-
-            number_of_lines++;
 
             Matcher matcher_mem = pattern_mem.matcher(line);
 
@@ -202,7 +194,7 @@ public class ServerMonitor {
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
         Pattern pattern_loss = Pattern.compile("\\d{1,3}%");
-        Pattern pattern_time = Pattern.compile("\\d{1,}.\\d{0,}");
+        Pattern pattern_time = Pattern.compile("\\d+.\\d*");
 
         int number_of_lines = 0;
         boolean found_loss = false;
@@ -232,8 +224,8 @@ public class ServerMonitor {
                     Matcher matcher_time = pattern_time.matcher(line);
 
                     if (matcher_time.find()) {
-                        matcher_time.find();
-                        time = Float.parseFloat(line.substring(matcher_time.start(), matcher_time.end()));
+                        if (matcher_time.find())
+                            time = Float.parseFloat(line.substring(matcher_time.start(), matcher_time.end()));
                     }
                 }
             }
@@ -263,13 +255,11 @@ public class ServerMonitor {
 
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
-        Pattern pattern_name = Pattern.compile("/[^ \\n]{0,}");
-        Pattern pattern_value = Pattern.compile(" \\d{1,}");
+        Pattern pattern_name = Pattern.compile("/[^ \\n]*");
+        Pattern pattern_value = Pattern.compile(" \\d+");
 
-        ArrayList<String> load_mem_name = new ArrayList<String>();
-        ArrayList<Float> load_mem = new ArrayList<Float>();
-
-        int number_of_lines = 0;
+        ArrayList<String> load_mem_name = new ArrayList<>();
+        ArrayList<Float> load_mem = new ArrayList<>();
 
         String line;
         while (true) {
@@ -278,12 +268,10 @@ public class ServerMonitor {
                 break;
             }
 
-            number_of_lines++;
-
             Matcher matcher_name = pattern_name.matcher(line);
             boolean find_name = false;
             String name = "";
-            float value = -1;
+            float value;
 
             while (matcher_name.find()) {
                 find_name = true;
@@ -335,12 +323,12 @@ public class ServerMonitor {
 
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
-        Pattern pattern_name = Pattern.compile(".{1,}: ");
-        Pattern pattern_value = Pattern.compile(" \\d{1,} ");
+        Pattern pattern_name = Pattern.compile(".+: ");
+        Pattern pattern_value = Pattern.compile(" \\d+ ");
 
-        ArrayList<String> net_int_name = new ArrayList<String>();
-        ArrayList<Integer> net_int_rcv = new ArrayList<Integer>();
-        ArrayList<Integer> net_int_snt = new ArrayList<Integer>();
+        ArrayList<String> net_int_name = new ArrayList<>();
+        ArrayList<Integer> net_int_rcv = new ArrayList<>();
+        ArrayList<Integer> net_int_snt = new ArrayList<>();
 
         int number_of_lines = 0;
         int find_name_line = -101;
@@ -356,7 +344,7 @@ public class ServerMonitor {
             number_of_lines++;
 
             Matcher matcher_name = pattern_name.matcher(line);
-            String name = "";
+            String name;
 
             while (matcher_name.find()) {
                 find_name = true;
