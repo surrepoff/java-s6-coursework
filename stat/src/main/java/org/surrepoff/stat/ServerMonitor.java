@@ -1,24 +1,23 @@
 package org.surrepoff.stat;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static java.lang.Math.min;
 
 public class ServerMonitor {
     private boolean get_cpu;
     private boolean get_ram;
     private boolean get_memory;
-    private ArrayList<String> get_memory_name;
+    private final ArrayList<String> get_memory_name;
     private boolean get_ping;
-    private ArrayList<String> get_ping_site;
+    private final ArrayList<String> get_ping_site;
     private boolean get_net_int;
-    private ArrayList<String> get_net_int_name;
+    private final ArrayList<String> get_net_int_name;
+    private int get_time_s;
 
     ServerMonitor() {
         boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
@@ -40,6 +39,7 @@ public class ServerMonitor {
         get_memory = Boolean.parseBoolean(System.getProperty("get.memory"));
         get_ping = Boolean.parseBoolean(System.getProperty("get.ping"));
         get_net_int = Boolean.parseBoolean(System.getProperty("get.net_int"));
+        get_time_s = Integer.parseInt(System.getProperty("get.time_s"));
 
         String[] parts;
 
@@ -65,21 +65,30 @@ public class ServerMonitor {
     public void run() throws IOException {
         loadConfig();
 
-        if (get_cpu)
-            getLoadCPUThreads();
+        while (true)
+        {
+            if (get_cpu)
+                getLoadCPUThreads();
 
-        if (get_ram)
-            getLoadRAM();
+            if (get_ram)
+                getLoadRAM();
 
-        if (get_memory)
-            getLoadMemory();
+            if (get_memory)
+                getLoadMemory();
 
-        if (get_ping)
-            for (String site : get_ping_site)
-                getTimePing(site);
+            if (get_ping)
+                for (String site : get_ping_site)
+                    getTimePing(site);
 
-        if (get_net_int)
-            getLoadNetworkInterface();
+            if (get_net_int)
+                getLoadNetworkInterface();
+
+            try{
+                Thread.sleep(get_time_s * 1000L);
+            }catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public int getLoadCPUThreads() throws IOException {
@@ -92,7 +101,7 @@ public class ServerMonitor {
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
 
         Pattern pattern_cpu = Pattern.compile("%Cpu\\d{1,}");
-        Pattern pattern_cpu_value = Pattern.compile("\\d{1,2}.\\d{1,2} id");
+        Pattern pattern_cpu_value = Pattern.compile("\\d{1,3}.\\d{1,2} id");
 
         ArrayList<Float> load_cpu = new ArrayList<Float>();
 
