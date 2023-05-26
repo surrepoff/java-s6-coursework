@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.Date;
+import java.sql.Timestamp;
 
 public class DataBase {
     private static final String URL = "jdbc:postgresql://127.0.0.1:5432/sys_stat.db";
@@ -92,7 +94,7 @@ public class DataBase {
     public void createSMTable(Connection connection) {
         Statement statement;
         try {
-            String query = "CREATE TABLE sm_data (id SERIAL, time TIMESTAMPTZ, get_cpu BOOLEAN, get_ram BOOLEAN, get_memory BOOLEAN, get_ping BOOLEAN, get_net_int BOOLEAN, primary key(id));";
+            String query = "CREATE TABLE sm_data (id SERIAL, time TIMESTAMP, get_cpu BOOLEAN, get_ram BOOLEAN, get_memory BOOLEAN, get_ping BOOLEAN, get_net_int BOOLEAN, primary key(id));";
             statement = connection.createStatement();
             statement.executeUpdate(query);
             System.out.println("TABLE CREATED: sm_data");
@@ -139,8 +141,10 @@ public class DataBase {
 
     public void addDataToSMTable(Connection connection, ServerMonitorInfo sm_info) {
         Statement statement;
+        Date date = new Date();
+        Timestamp timestamp = new Timestamp(date.getTime());
         try {
-            String query = String.format("INSERT INTO sm_data (time, get_cpu, get_ram, get_memory, get_ping, get_net_int) values('%s', %b, %b, %b, %b, %b);", "2004-10-19 10:23:54+02", sm_info.get_cpu, sm_info.get_ram, sm_info.get_memory, sm_info.get_ping, sm_info.get_net_int);
+            String query = String.format("INSERT INTO sm_data (time, get_cpu, get_ram, get_memory, get_ping, get_net_int) values('%s', %b, %b, %b, %b, %b);", timestamp, sm_info.get_cpu, sm_info.get_ram, sm_info.get_memory, sm_info.get_ping, sm_info.get_net_int);
             statement = connection.createStatement();
             statement.executeUpdate(query);
             System.out.println("DATA ADD TO sm_data");
