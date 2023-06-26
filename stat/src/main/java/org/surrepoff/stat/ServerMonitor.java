@@ -34,6 +34,9 @@ public class ServerMonitor {
         sm_info.get_net_int = Boolean.parseBoolean(System.getProperty("get.net_int"));
         sm_info.get_time_s = Integer.parseInt(System.getProperty("get.time_s"));
 
+        sm_info.database_username = System.getProperty("database.username");
+        sm_info.database_password = System.getProperty("database.password");
+
         String[] parts;
 
         parts = System.getProperty("get.memory.name").split(";");
@@ -58,7 +61,7 @@ public class ServerMonitor {
     public void run() throws IOException {
         loadConfig();
 
-        Connection connection = db.connectToDB();
+        Connection connection = db.connectToDB(sm_info);
         db.checkDB(connection);
 
         while (true) {
@@ -88,7 +91,7 @@ public class ServerMonitor {
         }
     }
 
-    public void getLoadCPUThreads() throws IOException {
+    private void getLoadCPUThreads() throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "top -b -1 -n 1 -w 200");
 
         builder.redirectErrorStream(true);
@@ -117,10 +120,7 @@ public class ServerMonitor {
                     load_cpu.add(100 - Float.parseFloat(line.substring(matcher_cpu_value.start(), matcher_cpu_value.end() - 3)));
                 }
             }
-            //System.out.println(line);
         }
-
-        //System.out.println(number_of_lines);
 
         int i = 0;
         for (float f : load_cpu) {
@@ -131,7 +131,7 @@ public class ServerMonitor {
         sm_info.result_cpu = load_cpu;
     }
 
-    public void getLoadRAM() throws IOException {
+    private void getLoadRAM() throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "free");
 
         builder.redirectErrorStream(true);
@@ -169,10 +169,7 @@ public class ServerMonitor {
 
                 load_ram = ((float) used / total) * 100;
             }
-
-            //System.out.println(line);
         }
-        //System.out.println(number_of_lines);
 
         load_ram = (float) Math.round(load_ram * 100) / 100;
 
@@ -181,7 +178,7 @@ public class ServerMonitor {
         sm_info.result_ram = load_ram;
     }
 
-    public void getTimePing(String address) throws IOException {
+    private void getTimePing(String address) throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "ping -c 3 " + address);
 
         builder.redirectErrorStream(true);
@@ -226,8 +223,6 @@ public class ServerMonitor {
                     }
                 }
             }
-
-            //System.out.println(line);
         }
 
         time = (float) Math.round(time * 100) / 100;
@@ -235,7 +230,6 @@ public class ServerMonitor {
         if (packet_loss == 100)
             time = -1;
 
-        //System.out.println(number_of_lines);
         System.out.printf("Ping to %s\n", address);
         System.out.printf("Packet loss = %d %%\n", packet_loss);
         System.out.printf("Time = %.2f ms\n", time);
@@ -243,7 +237,7 @@ public class ServerMonitor {
         sm_info.result_ping_time.add(time);
     }
 
-    public void getLoadMemory() throws IOException {
+    private void getLoadMemory() throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "df");
 
         builder.redirectErrorStream(true);
@@ -294,8 +288,6 @@ public class ServerMonitor {
                 load_mem_name.add(name);
                 load_mem.add(value);
             }
-
-            //System.out.println(line);
         }
 
         for (int i = 0; i < load_mem_name.size(); i++) {
@@ -327,7 +319,7 @@ public class ServerMonitor {
         }
     }
 
-    public void getLoadNetworkInterface() throws IOException {
+    private void getLoadNetworkInterface() throws IOException {
         ProcessBuilder builder = new ProcessBuilder("/bin/sh", "-c", "ifconfig");
 
         builder.redirectErrorStream(true);
@@ -383,10 +375,7 @@ public class ServerMonitor {
                 }
                 net_int_snt.add(sent);
             }
-
-            //System.out.println(line);
         }
-
 
         for (int i = 0; i < net_int_name.size(); i++) {
             String load_name = net_int_name.get(i);

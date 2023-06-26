@@ -8,13 +8,14 @@ import java.util.Date;
 import java.sql.Timestamp;
 
 public class DataBase {
-    private static final String URL = "jdbc:postgresql://127.0.0.1:5432/sys_stat.db";
-    private static final String USERNAME = "postgres";
-    private static final String PASSWORD = "123";
     private int sm_id;
 
-    public Connection connectToDB() {
+    public Connection connectToDB(ServerMonitorInfo sm_info) {
         Connection connection;
+
+        String URL = "jdbc:postgresql://127.0.0.1:5432/sys_stat.db";
+        String USERNAME = sm_info.database_username;
+        String PASSWORD = sm_info.database_password;
 
         try {
             Class.forName("org.postgresql.Driver");
@@ -72,7 +73,7 @@ public class DataBase {
             addDataToNetIntTable(connection, sm_info);
     }
 
-    public boolean checkNoTable(Connection connection, String table_name) {
+    private boolean checkNoTable(Connection connection, String table_name) {
         Statement statement;
         ResultSet resultSet;
         boolean exist = false;
@@ -91,7 +92,7 @@ public class DataBase {
         return !exist;
     }
 
-    public void createSMTable(Connection connection) {
+    private void createSMTable(Connection connection) {
         Statement statement;
         try {
             String query = "CREATE TABLE sm_data (id SERIAL, time TIMESTAMP, get_cpu BOOLEAN, get_ram BOOLEAN, get_memory BOOLEAN, get_ping BOOLEAN, get_net_int BOOLEAN, primary key(id));";
@@ -103,7 +104,7 @@ public class DataBase {
         }
     }
 
-    public void createRAMTable(Connection connection) {
+    private void createRAMTable(Connection connection) {
         Statement statement;
         try {
             String query = "CREATE TABLE ram_data (id SERIAL, sm_id INTEGER, value REAL, primary key(id));";
@@ -115,7 +116,7 @@ public class DataBase {
         }
     }
 
-    public void createNetIntTable(Connection connection) {
+    private void createNetIntTable(Connection connection) {
         Statement statement;
         try {
             String query = "CREATE TABLE net_int_data (id SERIAL, sm_id INTEGER, name VARCHAR(200), value_snt INTEGER, value_rcv INTEGER, primary key(id));";
@@ -127,7 +128,7 @@ public class DataBase {
         }
     }
 
-    public void createTable(Connection connection, String table_name) {
+    private void createTable(Connection connection, String table_name) {
         Statement statement;
         try {
             String query = String.format("CREATE TABLE %s (id SERIAL, sm_id INTEGER, name VARCHAR(200), value REAL, primary key(id));", table_name);
@@ -139,7 +140,7 @@ public class DataBase {
         }
     }
 
-    public void addDataToSMTable(Connection connection, ServerMonitorInfo sm_info) {
+    private void addDataToSMTable(Connection connection, ServerMonitorInfo sm_info) {
         Statement statement;
         Date date = new Date();
         Timestamp timestamp = new Timestamp(date.getTime());
@@ -153,7 +154,7 @@ public class DataBase {
         }
     }
 
-    public void addDataToRAMTable(Connection connection, ServerMonitorInfo sm_info) {
+    private void addDataToRAMTable(Connection connection, ServerMonitorInfo sm_info) {
         Statement statement;
         try {
             String query = String.format("INSERT INTO ram_data (sm_id, value) values(%d, %.2f);", sm_id, sm_info.result_ram);
@@ -165,7 +166,7 @@ public class DataBase {
         }
     }
 
-    public void addDataToCPUTable(Connection connection, ServerMonitorInfo sm_info) {
+    private void addDataToCPUTable(Connection connection, ServerMonitorInfo sm_info) {
         Statement statement;
         for (int i = 0; i < sm_info.result_cpu.size(); i++) {
             try {
@@ -179,7 +180,7 @@ public class DataBase {
         }
     }
 
-    public void addDataToMemoryTable(Connection connection, ServerMonitorInfo sm_info) {
+    private void addDataToMemoryTable(Connection connection, ServerMonitorInfo sm_info) {
         Statement statement;
         for (int i = 0; i < sm_info.get_memory_name.size(); i++) {
             try {
@@ -207,7 +208,7 @@ public class DataBase {
         }
     }
 
-    public void addDataToNetIntTable(Connection connection, ServerMonitorInfo sm_info) {
+    private void addDataToNetIntTable(Connection connection, ServerMonitorInfo sm_info) {
         Statement statement;
         for (int i = 0; i < sm_info.get_net_int_name.size(); i++) {
             try {
@@ -221,7 +222,7 @@ public class DataBase {
         }
     }
 
-    public int lastIndexFromTable(Connection connection, String table_name) {
+    private int lastIndexFromTable(Connection connection, String table_name) {
         Statement statement;
         ResultSet resultSet;
         int index = 0;

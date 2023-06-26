@@ -18,6 +18,8 @@ public class ServerMonitorInfo {
     public ArrayList<Integer> result_net_int_rcv;
     public ArrayList<Integer> result_net_int_snt;
     public int get_time_s;
+    public String database_username;
+    public String database_password;
 
     ServerMonitorInfo(){
         get_memory_name = new ArrayList<>();
